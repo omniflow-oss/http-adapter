@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+jobs:
+  build-test:
+    name: Build and Test (Maven)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: 'maven'
+
+      - name: Build and Test
+        run: mvn -B -U -ntp clean verify
+
+      - name: Upload surefire reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: '**/target/surefire-reports/**'
+
+      - name: Upload JaCoCo aggregate report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-aggregate
+          path: adapter-http-tests/target/site/jacoco-aggregate/**
+
+      - name: Generate coverage badges
+        if: github.ref == 'refs/heads/main'
+        uses: cicirello/jacoco-badge-generator@v4
+        with:
+          generate-coverage-badge: true
+          generate-branches-badge: true
+          jacoco-csv-file: adapter-http-tests/target/site/jacoco-aggregate/jacoco.csv
+          badges-directory: .github/badges
+
+      - name: Commit coverage badges
+        if: github.ref == 'refs/heads/main'
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'chore(ci): update coverage badges [skip ci]'
+          file_pattern: .github/badges/*.svg

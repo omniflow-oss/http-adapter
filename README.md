@@ -1,5 +1,8 @@
 # OFKit Adapter HTTP (Omniflow)
 
+![CI](https://github.com/omniflow-oss/http-adapter/actions/workflows/ci.yml/badge.svg?branch=main)
+![Coverage](.github/badges/jacoco.svg)
+
 Build a configurable, resilient, observable, secure, mockable HTTP adapter for Omniflow, running on Quarkus (JDK 17). The adapter standardizes upstream HTTP integrations by applying an inverted response evaluation logic and by concentrating cross‑cutting concerns (auth, retry, cache, observability, security) behind a clean, hexagonal boundary.
 
 - Inverted logic per response: success rules → specific error rules → generic RFC‑7807
