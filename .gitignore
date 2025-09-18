@@ -15,3 +15,29 @@ buildNumber.properties
 .project
 # JDT-specific (Eclipse Java Development Tools)
 .classpath
+
+# IDEs
+.idea/
+*.iml
+out/
+.settings/
+.vscode/
+
+# Build systems
+build/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Env files
+.env
+.env.*
+!.env.example
+
+# Quarkus
+.quarkus/

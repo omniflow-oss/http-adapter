@@ -1,0 +1,28 @@
+ofkit:
+  http:
+    profiles:
+      accounts_api:
+        base_url: "http://localhost:0" # will be overridden in test
+        rules:
+          success:
+            - id: ok-2xx-json-flag
+              when:
+                all:
+                  - status: "200-299"
+                  - json: { pointer: "/status", equals: "OK" }
+              produce: { type: json, pick_pointer: "/data" }
+          errors:
+            - id: err-business
+              when:
+                all:
+                  - status: "200-299"
+                  - json: { pointer: "/error/code", exists: true }
+              problem:
+                type: "https://omniflow/business"
+                title: "Erreur métier amont"
+                status: 422
+        generic_problem:
+          type: "about:blank"
+          title: "Erreur service externe"
+          status: 502
+

@@ -1,0 +1,15 @@
+profile: header_profile
+request:
+  method: GET
+  path: /headers
+upstream:
+  status: 200
+  headers:
+    Content-Type: text/plain
+    X-Flag: OK
+  body_file: golden/accounts/by-msisdn/ok.json
+expect:
+  kind: success
+  rule_id: ok-header-flag
+  status: 200
+

@@ -1,0 +1,14 @@
+profile: accounts_api
+request:
+  method: GET
+  path: /v1/accounts?msisdn=33612345678
+upstream:
+  status: 200
+  headers:
+    Content-Type: application/json
+  body_file: golden/accounts/by-msisdn/ok.json
+expect:
+  kind: success
+  rule_id: ok-2xx-json-flag
+  status: 200
+

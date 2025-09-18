@@ -1,0 +1,16 @@
+ofkit:
+  http:
+    profiles:
+      json_profile:
+        base_url: "http://localhost:0"
+        rules:
+          success:
+            - id: ok-json-regex
+              when:
+                json: { pointer: "/msg", regex: "^P.*" }
+          errors: []
+        generic_problem:
+          type: "about:blank"
+          title: "Erreur service externe"
+          status: 502
+

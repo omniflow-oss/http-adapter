@@ -1,0 +1,14 @@
+profile: json_profile
+request:
+  method: GET
+  path: /json
+upstream:
+  status: 200
+  headers:
+    Content-Type: application/json
+  body_file: golden/misc/json_msg_ok.json
+expect:
+  kind: success
+  rule_id: ok-json-regex
+  status: 200
+

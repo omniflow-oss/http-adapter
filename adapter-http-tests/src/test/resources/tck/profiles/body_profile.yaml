@@ -1,0 +1,16 @@
+ofkit:
+  http:
+    profiles:
+      body_profile:
+        base_url: "http://localhost:0"
+        rules:
+          success:
+            - id: ok-body-regex
+              when:
+                body_regex: ".*pass.*"
+          errors: []
+        generic_problem:
+          type: "about:blank"
+          title: "Erreur service externe"
+          status: 502
+

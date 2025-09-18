@@ -1,0 +1,13 @@
+profile: rl_profile
+request:
+  method: GET
+  path: /429
+upstream:
+  status: 429
+  headers:
+    Retry-After: '3'
+expect:
+  kind: failure
+  rule_id: err-429
+  status: 429
+

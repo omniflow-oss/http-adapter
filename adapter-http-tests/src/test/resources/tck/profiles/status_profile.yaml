@@ -1,0 +1,15 @@
+ofkit:
+  http:
+    profiles:
+      status_profile:
+        base_url: "http://localhost:0"
+        rules:
+          success:
+            - id: ok-2xx
+              when: { status: "200-299" }
+          errors: []
+        generic_problem:
+          type: "about:blank"
+          title: "Erreur service externe"
+          status: 502
+

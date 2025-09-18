@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "BUSINESS_ERR",
+    "message": "Invalid MSISDN"
+  }
+}
+

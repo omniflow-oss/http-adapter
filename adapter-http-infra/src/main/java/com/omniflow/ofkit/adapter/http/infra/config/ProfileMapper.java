@@ -1,0 +1,171 @@
+package com.omniflow.ofkit.adapter.http.infra.config;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.omniflow.ofkit.adapter.http.domain.model.AdapterProfile;
+import com.omniflow.ofkit.adapter.http.domain.model.AuthSpec;
+import com.omniflow.ofkit.adapter.http.domain.model.CachePolicy;
+import com.omniflow.ofkit.adapter.http.domain.model.HttpClientSpec;
+import com.omniflow.ofkit.adapter.http.domain.model.ProblemDetails;
+import com.omniflow.ofkit.adapter.http.domain.model.RetrySpec;
+import com.omniflow.ofkit.adapter.http.domain.model.SslSpec;
+import com.omniflow.ofkit.adapter.http.domain.rules.AndPredicate;
+import com.omniflow.ofkit.adapter.http.domain.rules.BodyRegexPredicate;
+import com.omniflow.ofkit.adapter.http.domain.rules.ErrorRule;
+import com.omniflow.ofkit.adapter.http.domain.rules.HeaderRegexPredicate;
+import com.omniflow.ofkit.adapter.http.domain.rules.JsonPointerPredicate;
+import com.omniflow.ofkit.adapter.http.domain.rules.ResponsePredicate;
+import com.omniflow.ofkit.adapter.http.domain.rules.StatusPredicate;
+import com.omniflow.ofkit.adapter.http.domain.rules.SuccessRule;
+import org.mapstruct.Mapper;
+import org.mapstruct.factory.Mappers;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Reusable mapper from YAML/JSON nodes to domain profiles, rules and specs.
+ * Exposed as a CDI MapStruct mapper for reuse across infra components.
+ */
+@Mapper(componentModel = "cdi")
+public interface ProfileMapper {
+    ProfileMapper INSTANCE = Mappers.getMapper(ProfileMapper.class);
+
+    default AdapterProfile toProfile(String id, JsonNode p) {
+        String baseUrl = p.path("base_url").asText(null);
+        List<SuccessRule> success = new ArrayList<>();
+        JsonNode successArr = p.path("rules").path("success");
+        if (successArr.isArray()) {
+            for (JsonNode r : successArr) {
+                String rid = r.path("id").asText();
+                ResponsePredicate pred = parseWhen(r.path("when"));
+                String pick = r.path("produce").path("pick_pointer").asText(null);
+                success.add(new SuccessRule(rid, pred, pick));
+            }
+        }
+
+        List<ErrorRule> errors = new ArrayList<>();
+        JsonNode errArr = p.path("rules").path("errors");
+        if (errArr.isArray()) {
+            for (JsonNode r : errArr) {
+                String rid = r.path("id").asText();
+                ResponsePredicate pred = parseWhen(r.path("when"));
+                JsonNode prob = r.path("problem");
+                ProblemDetails pd = ProblemDetails.of(
+                        prob.path("type").asText("about:blank"),
+                        prob.path("title").asText("Erreur"),
+                        prob.path("status").asInt(500),
+                        prob.path("detail_template").asText("")
+                );
+                errors.add(new ErrorRule(rid, pred, pd));
+            }
+        }
+
+        JsonNode gp = p.path("generic_problem");
+        ProblemDetails generic = ProblemDetails.of(
+                gp.path("type").asText("about:blank"),
+                gp.path("title").asText("Erreur service externe"),
+                gp.path("status").asInt(502),
+                gp.path("detail_template").asText("No rule matched")
+        );
+        CachePolicy cache = parseCache(p.path("cache"));
+        RetrySpec retry = parseRetry(p.path("retry"));
+        HttpClientSpec http = parseHttp(p.path("timeouts"), p.path("ssl"), p.path("pool"));
+        AuthSpec auth = parseAuth(p.path("auth"));
+        return new AdapterProfile(id, baseUrl, success, errors, generic, cache, retry, http, auth);
+    }
+
+    default ResponsePredicate parseStatus(String spec) {
+        if (spec == null || spec.isBlank()) return ctx -> false;
+        if (spec.contains("-")) {
+            String[] parts = spec.split("-");
+            int min = Integer.parseInt(parts[0]);
+            int max = Integer.parseInt(parts[1]);
+            return new StatusPredicate(min, max);
+        } else {
+            int code = Integer.parseInt(spec);
+            return new StatusPredicate(code, code);
+        }
+    }
+
+    default ResponsePredicate parseWhen(JsonNode when) {
+        if (when == null || when.isMissingNode() || when.isNull()) return ctx -> false;
+
+        if (when.has("status")) {
+            return parseStatus(when.path("status").asText());
+        }
+        if (when.has("header")) {
+            JsonNode h = when.path("header");
+            return new HeaderRegexPredicate(h.path("name").asText(), h.path("regex").asText());
+        }
+        if (when.has("body_regex")) {
+            return new BodyRegexPredicate(when.path("body_regex").asText());
+        }
+        if (when.has("json")) {
+            JsonNode j = when.path("json");
+            String ptr = j.path("pointer").asText();
+            if (j.has("equals")) return JsonPointerPredicate.equalsAt(ptr, j.path("equals").asText());
+            if (j.has("regex")) return JsonPointerPredicate.matchesAt(ptr, j.path("regex").asText());
+            if (j.has("exists")) return JsonPointerPredicate.existsAt(ptr);
+        }
+        if (when.has("all") && when.path("all").isArray()) {
+            List<ResponsePredicate> list = new ArrayList<>();
+            for (JsonNode item : when.path("all")) {
+                list.add(parseWhen(item));
+            }
+            return new AndPredicate(list);
+        }
+        return ctx -> false;
+    }
+
+    default CachePolicy parseCache(JsonNode c) {
+        if (c == null || c.isMissingNode() || !c.path("enabled").asBoolean(false)) {
+            return CachePolicy.disabled();
+        }
+        int ttl = c.path("default_ttl_s").asInt(0);
+        int swr = c.path("swr_ttl_s").asInt(0);
+        int sie = c.path("sie_ttl_s").asInt(0);
+        boolean useEtag = c.path("validators").path("use_etag").asBoolean(true);
+        boolean useLm = c.path("validators").path("use_last_modified").asBoolean(true);
+        int maxBodyKb = c.path("max_body_kb").asInt(0);
+        int negativeTtl = c.path("negative_ttl_s").asInt(0);
+        List<String> vary = new ArrayList<>();
+        if (c.has("vary_headers") && c.path("vary_headers").isArray()) {
+            c.path("vary_headers").forEach(n -> vary.add(n.asText()));
+        }
+        return new CachePolicy(true, ttl, swr, sie, useEtag, useLm, vary, maxBodyKb, negativeTtl);
+    }
+
+    default RetrySpec parseRetry(JsonNode r) {
+        if (r == null || r.isMissingNode() || r.isNull() || !r.path("enabled").asBoolean(false)) {
+            return RetrySpec.disabled();
+        }
+        boolean enabled = true;
+        int max = Math.max(0, r.path("max_retries").asInt(0));
+        long initial = Math.max(0, r.path("initial_delay_ms").asLong(0));
+        long maxDelay = Math.max(0, r.path("max_delay_ms").asLong(initial));
+        boolean jitter = r.path("jitter").asBoolean(true);
+        boolean respect = r.path("respect_retry_after").asBoolean(true);
+        boolean idempotent = r.path("idempotent_only").asBoolean(true);
+        return new RetrySpec(enabled, max, initial, maxDelay, jitter, respect, idempotent);
+    }
+
+    default HttpClientSpec parseHttp(JsonNode t, JsonNode s, JsonNode pool) {
+        int connect = t.path("connect_ms").asInt(5000);
+        int read = t.path("read_ms").asInt(10000);
+        boolean insecure = s.path("insecure").asBoolean(false);
+        int maxPool = pool.path("max_pool_size").asInt(50);
+        int maxWait = pool.path("max_wait_queue").asInt(-1);
+        boolean keepAlive = pool.path("keep_alive").asBoolean(true);
+        int keepAliveS = pool.path("keep_alive_timeout_s").asInt(60);
+        return new HttpClientSpec(connect, read, new SslSpec(insecure), maxPool, maxWait, keepAlive, keepAliveS);
+    }
+
+    default AuthSpec parseAuth(JsonNode a) {
+        String kind = a.path("kind").asText("none");
+        return switch (kind) {
+            case "bearer" -> new AuthSpec.Bearer(a.path("bearer").path("token").asText(""));
+            case "api_key" -> new AuthSpec.ApiKey(a.path("api_key").path("header").asText("X-API-Key"), a.path("api_key").path("value").asText(""));
+            default -> new AuthSpec.None();
+        };
+    }
+}

@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omniflow/ofkit/profiles-schema.json",
+  "type": "object",
+  "properties": {
+    "ofkit": {
+      "type": "object",
+      "properties": {
+        "http": {
+          "type": "object",
+          "properties": {
+            "profiles": {
+              "type": "object",
+              "minProperties": 1,
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "base_url": { "type": "string", "format": "uri" },
+                  "cache": {
+                    "type": "object",
+                    "properties": {
+                      "enabled": {"type": "boolean"},
+                      "default_ttl_s": {"type": "integer", "minimum": 0},
+                      "swr_ttl_s": {"type": "integer", "minimum": 0},
+                      "sie_ttl_s": {"type": "integer", "minimum": 0},
+                      "validators": {
+                        "type": "object",
+                        "properties": {
+                          "use_etag": {"type": "boolean"},
+                          "use_last_modified": {"type": "boolean"}
+                        }
+                      },
+                      "vary_headers": {"type": "array", "items": {"type": "string"}},
+                      "max_body_kb": {"type": "integer", "minimum": 0},
+                      "negative_ttl_s": {"type": "integer", "minimum": 0}
+                    }
+                  },
+                  "retry": {
+                    "type": "object",
+                    "properties": {
+                      "enabled": {"type": "boolean"},
+                      "max_retries": {"type": "integer", "minimum": 0},
+                      "initial_delay_ms": {"type": "integer", "minimum": 0},
+                      "max_delay_ms": {"type": "integer", "minimum": 0},
+                      "jitter": {"type": "boolean"},
+                      "respect_retry_after": {"type": "boolean"},
+                      "idempotent_only": {"type": "boolean"}
+                    }
+                  },
+                  "rules": {
+                    "type": "object",
+                    "properties": {
+                      "success": { "type": "array" },
+                      "errors": { "type": "array" }
+                    },
+                    "required": ["success"]
+                  },
+                  "timeouts": {
+                    "type": "object",
+                    "properties": {
+                      "connect_ms": {"type": "integer", "minimum": 0},
+                      "read_ms": {"type": "integer", "minimum": 0}
+                    }
+                  },
+                  "ssl": {
+                    "type": "object",
+                    "properties": {
+                      "insecure": {"type": "boolean"}
+                    }
+                  },
+                  "pool": {
+                    "type": "object",
+                    "properties": {
+                      "max_pool_size": {"type": "integer", "minimum": 1},
+                      "max_wait_queue": {"type": "integer"},
+                      "keep_alive": {"type": "boolean"},
+                      "keep_alive_timeout_s": {"type": "integer", "minimum": 0}
+                    }
+                  },
+                  "auth": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {"type": "string", "enum": ["none","bearer","api_key"]},
+                      "bearer": {
+                        "type": "object",
+                        "properties": {"token": {"type": "string"}}
+                      },
+                      "api_key": {
+                        "type": "object",
+                        "properties": {"header": {"type": "string"}, "value": {"type": "string"}}
+                      }
+                    }
+                  },
+                  "generic_problem": {
+                    "type": "object",
+                    "properties": {
+                      "type": {"type": "string"},
+                      "title": {"type": "string"},
+                      "status": {"type": "integer"}
+                    },
+                    "required": ["type", "title", "status"]
+                  }
+                },
+                "required": ["rules", "generic_problem"]
+              }
+            }
+          },
+          "required": ["profiles"]
+        }
+      },
+      "required": ["http"]
+    }
+  },
+  "required": ["ofkit"]
+}

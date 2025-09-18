@@ -1,0 +1,14 @@
+profile: accounts_api
+request:
+  method: GET
+  path: /v1/accounts/error
+upstream:
+  status: 200
+  headers:
+    Content-Type: application/json
+  body_file: golden/accounts/by-msisdn/error.json
+expect:
+  kind: failure
+  rule_id: err-business
+  status: 422
+

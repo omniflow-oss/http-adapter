@@ -1,0 +1,14 @@
+profile: body_profile
+request:
+  method: GET
+  path: /body
+upstream:
+  status: 200
+  headers:
+    Content-Type: text/plain
+  body_file: golden/misc/body_pass.txt
+expect:
+  kind: success
+  rule_id: ok-body-regex
+  status: 200
+

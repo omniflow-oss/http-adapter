@@ -1,0 +1,16 @@
+ofkit:
+  http:
+    profiles:
+      header_profile:
+        base_url: "http://localhost:0"
+        rules:
+          success:
+            - id: ok-header-flag
+              when:
+                header: { name: "X-Flag", regex: "^OK$" }
+          errors: []
+        generic_problem:
+          type: "about:blank"
+          title: "Erreur service externe"
+          status: 502
+

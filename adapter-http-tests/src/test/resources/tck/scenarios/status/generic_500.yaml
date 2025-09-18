@@ -1,0 +1,11 @@
+profile: status_profile
+request:
+  method: GET
+  path: /fivehundred
+upstream:
+  status: 500
+expect:
+  kind: failure
+  rule_id: generic_problem
+  status: 502
+

@@ -1,0 +1,21 @@
+ofkit:
+  http:
+    profiles:
+      rl_profile:
+        base_url: "http://localhost:0"
+        rules:
+          success:
+            - id: ok-2xx
+              when: { status: "200-299" }
+          errors:
+            - id: err-429
+              when: { status: "429" }
+              problem:
+                type: "https://omniflow/rate-limit"
+                title: "Rate limited"
+                status: 429
+        generic_problem:
+          type: "about:blank"
+          title: "Erreur service externe"
+          status: 502
+
